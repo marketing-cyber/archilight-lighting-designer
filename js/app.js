@@ -76,7 +76,7 @@ function render() { renderSteps(); renderPanel(); renderStage(); }
 
 function renderSteps() {
   $('#steps').innerHTML = STEPS.map((label, i) =>
-    `<li><button type="button" data-go="${i}"${i === app.step ? ' aria-current="step"' : ''}><span>${i + 1}</span>${label}</button></li>`).join('');
+    `<li><button type="button" data-go="${i}"${i === app.step ? ' aria-current="step"' : ''}><span>0${i + 1}</span>${label}</button></li>`).join('');
 }
 
 const lightCount = (s) => s.fixtures.length + s.decor.length;
@@ -86,7 +86,7 @@ const lightCount = (s) => s.fixtures.length + s.decor.length;
 function roomHtml() {
   const s = app.state, room = ROOMS[s.room];
   const field = (key, label, lim) => `<label>${label}<span class="unit"><input type="number" inputmode="decimal" id="size-${key}" name="${key}" value="${s.size[key]}" min="${lim[0]}" max="${lim[1]}" step="0.1"> m</span></label>`;
-  return `<h2>Design the lighting for your space</h2>
+  return `<h2>Light your space. <em>See it first.</em></h2>
     <ol class="how"><li>Tell us the room</li><li>Place Archilight lights and switch them on</li><li>Send the list for a quote</li></ol>
     <h3>Space</h3>
     <div class="seg" role="group" aria-label="Project type">${Object.entries(SECTORS).map(([k, v]) => `<button type="button" data-sector="${k}" aria-pressed="${room.sector === k}">${v}</button>`).join('')}</div>
@@ -95,7 +95,7 @@ function roomHtml() {
     <div class="dims">${field('length', 'Length', LIMITS.side)}${field('width', 'Width', LIMITS.side)}${field('height', 'Ceiling', LIMITS.height)}</div>
     ${app.sizeMsg ? `<p class="field-msg">${esc(app.sizeMsg)}</p>` : ''}
     <p class="muted">We start you with downlights spaced for even light. You can change everything in the next step.</p>
-    <div class="nav"><span></span><button type="button" class="primary" data-go="${DESIGN}">Start designing</button></div>`;
+    <div class="nav"><span></span><button type="button" class="primary" data-go="${DESIGN}">Start designing →</button></div>`;
 }
 
 // ---- Step 2: design ------------------------------------------------------------------------------
@@ -161,8 +161,8 @@ function seriesHtml(list, current, kind) {
   const cards = list.map((x) => {
     const inUse = x.products.some((p) => p.handle === current);
     return `<button type="button" class="card${inUse ? ' in-use' : ''}" data-series="${esc(x.name)}" data-kind="${kind}">
-      <img src="${esc(P.thumb(x.rep.image, x.rep.handle))}" alt="" loading="lazy" width="96" height="96">
-      <span>${esc(x.name)}</span><small>${inUse ? 'In your room' : `${x.products.length} model${x.products.length > 1 ? 's' : ''}`}</small>
+      <span class="card-photo"><img src="${esc(P.thumb(x.rep.image, x.rep.handle))}" alt="" loading="lazy" width="160" height="160"></span>
+      <span class="card-text"><small class="card-type">${kind === 'down' ? 'Downlights' : 'Track lights'}</small><span class="card-name">${esc(x.name)}</span><small>${inUse ? '● In your room' : `${x.products.length} model${x.products.length > 1 ? 's' : ''}`}</small></span>
     </button>`;
   }).join('');
   const open = list.find((x) => x.name === app.openSeries);
@@ -204,9 +204,9 @@ function trackTab() {
 function decorTab(tab) {
   return `<div class="cards">${D.DECOR.filter((p) => tab.kinds.includes(p.kind)).map((p) => {
     const count = app.state.decor.filter((d) => d.pid === p.id).length;
-    return `<button type="button" class="card" data-add="${esc(p.id)}">
-      <img src="${esc(p.image)}" alt="" loading="lazy" width="96" height="96" class="cutout">
-      <span>${esc(shortName(p.name))}</span>${count ? `<small class="count">${count} in room · add another</small>` : '<small>Add to room</small>'}
+    return `<button type="button" class="card${count ? ' in-use' : ''}" data-add="${esc(p.id)}">
+      <span class="card-photo"><img src="${esc(p.image)}" alt="" loading="lazy" width="160" height="160"></span>
+      <span class="card-text"><small class="card-type">${KIND_LABEL[p.kind]}s</small><span class="card-name">${esc(shortName(p.name))}</span>${count ? `<small>● ${count} in room · add another</small>` : '<small>Add to room +</small>'}</span>
     </button>`;
   }).join('')}</div>`;
 }
@@ -217,8 +217,8 @@ function designHtml() {
     `<button type="button" role="tab" data-tab="${t.key}" aria-selected="${t.key === app.tab}">${t.label}</button>`).join('')}</div>`;
   const body = tab.key === 'down' ? downTab() : tab.key === 'track' ? trackTab() : decorTab(tab);
   const n = lightCount(app.state);
-  return `<h2>Design</h2>${settingsHtml()}${editorHtml()}${tabs}<div class="tab-body">${body}</div>
-    <div class="nav sticky"><button type="button" data-go="0">Back</button><button type="button" class="primary" data-go="${LIST}">See my list · ${n} light${n === 1 ? '' : 's'}</button></div>`;
+  return `<h2>Design <em>your light.</em></h2>${settingsHtml()}${editorHtml()}${tabs}<div class="tab-body">${body}</div>
+    <div class="nav sticky"><button type="button" data-go="0">Back</button><button type="button" class="primary" data-go="${LIST}">See my list · ${n} light${n === 1 ? '' : 's'} →</button></div>`;
 }
 
 // ---- Step 3: your list ---------------------------------------------------------------------------
@@ -235,14 +235,14 @@ function listHtml() {
   const c = app.contact;
   const projects = ['Residential', 'Commercial', 'Architect / designer', 'Builder / electrician'];
   const s = app.state, room = ROOMS[s.room];
-  return `<h2>Your list</h2>
+  return `<h2>Your <em>lighting list.</em></h2>
     ${app.snapshot ? `<figure class="snapshot"><img src="${app.snapshot}" alt="Your lighting design in 3D"><figcaption>${esc(room.label)}, ${s.size.length} × ${s.size.width} m · ${esc(MOODS[s.mood].label)} · ${esc(s.finish)} fittings</figcaption></figure>` : ''}
     ${lines.length ? `<h3>Lights</h3>${table(lights)}${parts.length ? `<h3>Track, profile and parts</h3>${table(parts)}` : ''}` : '<p class="muted">Your design has no lights yet.</p>'}
     <div class="actions"><button type="button" data-action="copy">Copy list</button><button type="button" data-go="${DESIGN}">Keep designing</button></div>
     <div class="distributor">
       <p class="set-label">Where to buy</p>
       <p>Archilight is supplied in New Zealand by <b>${DISTRIBUTOR.name}</b>. Every product above links to its page there, with stock and options.</p>
-      <a class="button" href="${DISTRIBUTOR.url}" target="_blank" rel="noopener">Browse Archilight at ${DISTRIBUTOR.name} ↗</a>
+      <a class="text-link" href="${DISTRIBUTOR.url}" target="_blank" rel="noopener">Browse Archilight at ${DISTRIBUTOR.name} ↗</a>
     </div>
     <h3>Get a quote</h3>
     <p class="muted">Send this list and ${DISTRIBUTOR.name} will confirm drivers, compatibility and pricing.</p>
@@ -257,7 +257,7 @@ function listHtml() {
       ${app.mailto ? `<a id="mailto" class="button" href="${esc(app.mailto)}">Open the email draft again</a>` : ''}
       ${app.enquiry ? `<label>Your enquiry<textarea id="enquiry-text" rows="8" readonly>${esc(app.enquiry)}</textarea></label>
       <div class="actions"><button type="button" data-action="copy-enquiry">Copy enquiry</button></div>` : ''}
-      <button type="submit" class="button primary">Send for a quote</button>
+      <button type="submit" class="button primary">Send for a quote ↗</button>
       <p class="muted">This opens an email draft to <span class="address">${DISTRIBUTOR_EMAIL}</span> with your list. Nothing is sent until you press send.</p>
     </form>`;
 }

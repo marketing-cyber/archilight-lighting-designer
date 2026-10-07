@@ -18,11 +18,19 @@
 </head>
 <body>
 <header class="site-header">
-  <a class="site-logo" href="https://archilight-light-space-scenes.cuddly-elk-3653.chatgpt.site/"><img src="assets/logo.png" alt="Archilight" width="135" height="26"></a>
-  <span class="tag">Lighting designer · demo</span>
+  <a class="site-logo" href="https://archilight-light-space-scenes.cuddly-elk-3653.chatgpt.site/" aria-label="Archilight home"><img src="assets/logo.png" alt="Archilight" width="400" height="49"></a>
+  <nav class="site-nav" aria-label="Archilight website">
+    <a href="https://archilight-light-space-scenes.cuddly-elk-3653.chatgpt.site/lighting/">Collections</a>
+    <a href="https://archilight-light-space-scenes.cuddly-elk-3653.chatgpt.site/collection/">All products</a>
+    <a href="https://archilight-light-space-scenes.cuddly-elk-3653.chatgpt.site/spaces/">Spaces</a>
+    <a href="https://archilight-light-space-scenes.cuddly-elk-3653.chatgpt.site/enquiry/">Contact</a>
+  </nav>
 </header>
-<main class="planner">
+<div class="tool-bar">
+  <p class="eyebrow">Archilight / Lighting designer</p>
   <ol class="steps" id="steps" aria-label="Steps"></ol>
+</div>
+<main class="planner">
   <section class="panel" id="panel" aria-live="polite"></section>
   <section class="stage" aria-label="3D room">
     <div class="stage-bar">
@@ -37,9 +45,19 @@
     </div>
   </section>
 </main>
-<p class="disclaimer">Estimate only — not a certified lighting calculation. Light effects and product shapes in the 3D room are simplified. Product data from the Wellforces catalogue, <span id="snapshot-date"></span>. The distributor confirms compatibility, drivers and availability.</p>
+<footer class="site-footer">
+  <div class="footer-top">
+    <img src="assets/logo-white.png" alt="Archilight" width="200" height="25">
+    <p>Light considered.<br>Space transformed.</p>
+    <a class="text-link" href="https://archilight-light-space-scenes.cuddly-elk-3653.chatgpt.site/enquiry/">Let’s talk about your space ↗</a>
+  </div>
+  <div class="footer-bottom">
+    <p class="disclaimer">Estimate only — not a certified lighting calculation. Light effects and product shapes in the 3D room are simplified. Product data from the Wellforces catalogue, <span id="snapshot-date"></span>. The distributor confirms compatibility, drivers and availability.</p>
+    <span>contact@archilight.co.nz</span>
+  </div>
+</footer>
 <div class="toast" id="toast" role="status" hidden><span id="toast-text"></span><button type="button" id="toast-see">See it</button></div>
-<noscript><p class="disclaimer">The lighting planner needs JavaScript.</p></noscript>
+<noscript><p class="notice">The lighting planner needs JavaScript.</p></noscript>
 <script type="module" src="js/app.js"></script>
 </body>
 </html>
