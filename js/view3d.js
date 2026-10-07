@@ -45,7 +45,8 @@ export class View3D {
     this.root = new THREE.Group();
     this.scene.add(this.staticRoot, this.root);
     this.input = null;
-    this.light = { cct: null, dim: 1, day: false, on: true };
+    // Brightness of each layer (0–1), set by the lighting scene and the layer switches.
+    this.light = { cct: null, day: false, levels: { ambient: 1, task: 1, accent: 1, decor: 1 } };
     this.roomKey = '';
     this.staticKey = '';
     this.selected = null;
@@ -123,10 +124,10 @@ export class View3D {
   }
 
   // Glow strength for a lit surface of `lumens` spread over `area` m², capped so it keeps its colour.
-  glowFor(lumens, area) {
-    if (!this.light.on) return 0;
+  glowFor(lumens, area, level) {
+    if (!level) return 0;
     const luminance = lumens / (Math.PI * Math.max(area, 1e-4));
-    return Math.min(luminance, GLOW_CAP / this.renderer.toneMappingExposure) * this.light.dim;
+    return Math.min(luminance, GLOW_CAP / this.renderer.toneMappingExposure) * level;
   }
 
   lightUp(obj, color, intensity) {
@@ -191,6 +192,7 @@ export class View3D {
     this.walls.s.visible = c.z < W / 2;
     this.walls.w.visible = c.x > -L / 2;
     this.walls.e.visible = c.x < L / 2;
+    for (const s of this.coveStrips || []) s.visible = this.walls[s.userData.face].visible;
   }
 
   rebuild() {
@@ -204,10 +206,10 @@ export class View3D {
 
     this.disposeGroup(this.root);
     this.pickables = [];
+    this.coveStrips = [];
     const t = inp.target;
     this.renderer.toneMappingExposure = EXPOSURE_K / t;
-    const on = this.light.on;
-    const dim = on ? this.light.dim : 0;
+    const lv = (role) => this.light.levels[role] ?? 1;
     const tint = kelvinToRgb(this.light.cct || inp.cct).map((c) => c + (1 - c) * WHITE_BALANCE);
     const color = new THREE.Color().setRGB(...tint, THREE.SRGBColorSpace);
     const rebuildLater = () => this.rebuild();
@@ -219,11 +221,16 @@ export class View3D {
       const p = productByHandle(d.handle);
       const g = realModel(d.handle, rebuildLater) || downlightModel(p, inp.finish);
       g.position.copy(this.at(d.x, d.y, H));
-      this.lightUp(g, color, this.glowFor(d.lm, 0.005));
+      this.lightUp(g, color, this.glowFor(d.lm, 0.005, lv(d.role)));
       this.root.add(g);
       this.addPickable(g, { type: 'fixture', id: d.id });
     }
-    if (on) for (const c of clusterLights(inp.down, inp.room)) this.spot(this.at(c.x, c.y, H - 0.02), this.at(c.x, c.y, 0), c, color, dim);
+    // Ambient and task downlights are separate circuits, so each is clustered and dimmed on its own.
+    for (const role of ['ambient', 'task']) {
+      const level = lv(role);
+      const group = inp.down.filter((d) => (d.role || 'ambient') === role);
+      if (level > 0 && group.length) for (const c of clusterLights(group, inp.room, role === 'task' ? 6 : 12)) this.spot(this.at(c.x, c.y, H - 0.02), this.at(c.x, c.y, 0), c, color, level);
+    }
 
     if (inp.track) {
       const { x0, x1, y } = inp.track;
@@ -234,27 +241,30 @@ export class View3D {
         const p = productByHandle(h.handle);
         const g = realModel(h.handle, rebuildLater) || trackHeadModel(p, inp.finish);
         g.position.copy(this.at(h.x, h.y, H - 0.03));
-        this.lightUp(g, color, this.glowFor(h.lm, 0.002));
+        this.lightUp(g, color, this.glowFor(h.lm, 0.002, lv('accent')));
         this.root.add(g);
         this.addPickable(g, { type: 'fixture', id: h.id });
       }
       // ≤ 8 head lights keeps the shader within low-end GPU light limits.
-      if (on) for (const c of clusterLights(inp.heads, inp.room, 8)) this.spot(this.at(c.x, y, H - 0.1), this.at(c.x, 0, 1.4), c, color, dim);
+      if (lv('accent') > 0) for (const c of clusterLights(inp.heads, inp.room, 8)) this.spot(this.at(c.x, y, H - 0.1), this.at(c.x, 0, 1.4), c, color, lv('accent'));
     }
 
     if (inp.coveLmPerM > 0) {
       // Each run washes the upper part of its wall (the cut-away hides the ceiling a real cove lights).
       const runs = [[L / 2, 0.15, L, L / 2, 0], [L / 2, W - 0.15, L, L / 2, W], [0.15, W / 2, W, 0, W / 2], [L - 0.15, W / 2, W, L, W / 2]];
       for (const [x, y, len, wx, wy] of runs) {
-        const strip = new THREE.Mesh(new THREE.BoxGeometry(len, 0.012, 0.012), new THREE.MeshStandardMaterial({ color: '#f2f2ee' }));
+        // The glowing line runs along its wall (box length on x for the long walls, on z for the short ones).
+        const alongX = wy === 0 || wy === W;
+        const strip = new THREE.Mesh(new THREE.BoxGeometry(alongX ? len : 0.012, 0.012, alongX ? 0.012 : len), new THREE.MeshStandardMaterial({ color: '#f2f2ee' }));
         strip.material.userData.glow = true;
         strip.position.copy(this.at(x, y, H - 0.12));
-        strip.lookAt(this.at(wx, wy, H - 0.12));
-        strip.rotateY(Math.PI / 2);
-        this.lightUp(strip, color, this.glowFor(inp.coveLmPerM, 0.012));
+        strip.userData.face = wy === 0 ? 'n' : wy === W ? 's' : wx === 0 ? 'w' : 'e';
+        this.coveStrips.push(strip);
+        const level = lv('ambient');
+        this.lightUp(strip, color, this.glowFor(inp.coveLmPerM, 0.012, level));
         this.root.add(strip);
-        if (!on) continue;
-        const luminance = (inp.coveLmPerM * dim) / (Math.PI * 0.05); // cd/m² of a 50 mm emitting strip
+        if (!level) continue;
+        const luminance = (inp.coveLmPerM * level) / (Math.PI * 0.05); // cd/m² of a 50 mm emitting strip
         const rect = new THREE.RectAreaLight(color, luminance, len, 0.05);
         rect.position.copy(this.at(x, y, H - 0.12));
         rect.lookAt(this.at(wx, wy, H - 0.12));
@@ -286,21 +296,22 @@ export class View3D {
       }
       const w = p.widthCm / 100, h = p.heightCm / 100;
       const area = p.finish === 'Stone White' ? Math.PI * (w * h + w * w / 2) : 0.004;
-      this.lightUp(g, color, this.glowFor(lm, area));
+      const level = lv(d.role || 'decor');
+      this.lightUp(g, color, this.glowFor(lm, area, level));
       this.root.add(g);
       this.addPickable(g, { type: 'decor', id: d.id });
-      if (!on || decorLights >= MAX_DECOR_LIGHTS) continue;
+      if (!level || decorLights >= MAX_DECOR_LIGHTS) continue;
       g.updateMatrixWorld(true);
       const src = g.localToWorld(g.userData.lightAt.clone());
       if (g.userData.upDown) {
         for (const dir of [1, -1]) {
-          const s = new THREE.SpotLight(color, peakCandela(lm / 2, 30) * dim, 0, Math.PI / 9, 0.5, 2);
+          const s = new THREE.SpotLight(color, peakCandela(lm / 2, 30) * level, 0, Math.PI / 9, 0.5, 2);
           s.position.copy(src);
           s.target.position.copy(src).add(new THREE.Vector3(0, dir, 0));
           this.root.add(s, s.target);
         }
       } else {
-        const pl = new THREE.PointLight(color, (lm / (4 * Math.PI)) * dim, 0, 2);
+        const pl = new THREE.PointLight(color, (lm / (4 * Math.PI)) * level, 0, 2);
         pl.position.copy(src);
         this.root.add(pl);
       }
@@ -308,7 +319,9 @@ export class View3D {
     }
 
     this.root.add(new THREE.HemisphereLight(0xffffff, 0x8d7b68, t * (this.light.day ? DAY_SKY : NIGHT_FILL)));
-    if (on) this.root.add(new THREE.HemisphereLight(color, color.clone().multiplyScalar(0.6), t * BOUNCE * dim));
+    // Bounce light follows the layers that light the room most.
+    const bounce = Math.max(lv('ambient'), 0.6 * lv('task'), 0.35 * lv('decor'), 0.3 * lv('accent'));
+    if (bounce > 0) this.root.add(new THREE.HemisphereLight(color, color.clone().multiplyScalar(0.6), t * BOUNCE * bounce));
     if (this.light.day) {
       const sun = new THREE.DirectionalLight(0xfff4e0, t * DAY_SUN);
       sun.position.copy(this.at(-L, -W, H * 3));

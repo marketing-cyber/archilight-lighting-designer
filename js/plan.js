@@ -240,7 +240,7 @@ export function addDownlight(s) {
     : chooseDownlight(ROOMS[s.room], s.size, MOODS[s.mood].cct, s.finish).product;
   if (!p) return { state: s, id: null };
   const id = nextId(s, 'd');
-  const f = { id, layer: 'down', handle: p.handle, x: round2(s.size.length / 2), y: round2(s.size.width / 2), beam: last ? last.beam : generalBeam(p) };
+  const f = { id, layer: 'down', handle: p.handle, x: round2(s.size.length / 2), y: round2(s.size.width / 2), beam: last ? last.beam : generalBeam(p), role: 'ambient', why: 'added' };
   return { state: { ...s, edited: true, fixtures: [...s.fixtures, f] }, id };
 }
 
@@ -278,7 +278,7 @@ export function statsFor(s, grid) {
 
 export function sceneInputs(s) {
   const strip = s.cove && productByHandle(s.cove.handle);
-  const withId = (f) => { const l = lit(f); return l && { ...l, id: f.id, handle: f.handle }; };
+  const withId = (f) => { const l = lit(f); return l && { ...l, id: f.id, handle: f.handle, role: f.role || (f.layer === 'track' ? 'accent' : 'ambient') }; };
   return {
     room: { ...s.size }, roomType: s.room, cct: MOODS[s.mood].cct, finish: s.finish, target: ROOMS[s.room].lux,
     down: s.fixtures.filter((f) => f.layer === 'down').map(withId).filter(Boolean),
@@ -297,8 +297,10 @@ export function lightHint(s, stats) {
     const more = Math.max(1, Math.ceil((count * target) / Math.max(avg, 1)) - count);
     return { level: 'low', text: `This room may look dim. Add about ${more} more downlight${more > 1 ? 's' : ''}.` };
   }
-  if (avg > target * 1.8 && count > 1) {
-    const fewer = Math.max(1, Math.min(count - 1, Math.floor(count - (count * target * 1.2) / avg)));
+  // A cove is a dimmable glow, so "too bright" is judged on the downlights alone (stats.downAvg).
+  const downAvg = stats.downAvg ?? avg;
+  if (downAvg > target * 1.8 && count > 1) {
+    const fewer = Math.max(1, Math.min(count - 1, Math.floor(count - (count * target * 1.2) / downAvg)));
     return { level: 'high', text: `Brighter than this room needs. You could remove about ${fewer} downlight${fewer > 1 ? 's' : ''}.` };
   }
   return { level: 'ok', text: 'Bright enough for this room.' };

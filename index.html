@@ -19,25 +19,21 @@
 <body>
 <header class="site-header">
   <a class="site-logo" href="https://archilight-light-space-scenes.cuddly-elk-3653.chatgpt.site/" aria-label="Archilight home"><img src="assets/logo.png" alt="Archilight" width="400" height="49"></a>
+  <p class="eyebrow">Lighting designer</p>
 </header>
-<div class="tool-bar">
-  <p class="eyebrow">Archilight / Lighting designer</p>
-  <ol class="steps" id="steps" aria-label="Steps"></ol>
-</div>
-<main class="planner">
-  <section class="panel" id="panel" aria-live="polite"></section>
+<main class="designer">
   <section class="stage" aria-label="3D room">
     <div class="stage-bar">
       <p id="hint" class="hint-pill" role="status"></p>
       <span class="stage-tools"><button type="button" class="link" id="undo" disabled>Undo</button><button type="button" class="link" id="reset-view">Reset view</button></span>
     </div>
     <div id="view3d"></div>
-    <div class="controls3d" id="controls3d">
-      <button type="button" class="toggle" id="lights" aria-pressed="true"><span class="dot"></span><span id="lights-label">Lights on</span></button>
-      <label>Brightness <input id="dim" type="range" name="dim" min="10" max="100" value="100"></label>
-      <label class="inline"><input id="day" type="checkbox" name="day"> Daylight</label>
-    </div>
+    <div class="scene-bar" id="scene-bar"></div>
   </section>
+  <div class="side">
+    <aside class="brief" id="brief" aria-label="Your space"></aside>
+    <aside class="scheme" id="scheme" aria-label="Your lighting scheme" aria-live="polite"></aside>
+  </div>
 </main>
 <div class="toast" id="toast" role="status" hidden><span id="toast-text"></span><button type="button" id="toast-see">See it</button></div>
 <noscript><p class="notice">The lighting planner needs JavaScript.</p></noscript>

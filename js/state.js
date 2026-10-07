@@ -3,8 +3,11 @@ import { ROOMS, MOODS, clampSize } from './rooms.js';
 import { productByHandle, isDownlight, isTrackHead, autoPlan } from './plan.js';
 import { decorById, fitDecor, FACES } from './decor.js';
 import { furnitureFor } from './furniture.js';
+import { validUses } from './scheme.js';
 
-const KEYS = ['v', 'room', 'size', 'mood', 'finish', 'layers', 'edited', 'fixtures', 'track', 'cove', 'downModel', 'headModel'];
+const KEYS = ['v', 'room', 'size', 'mood', 'finish', 'layers', 'edited', 'fixtures', 'track', 'cove', 'downModel', 'headModel', 'uses'];
+const ROLES = ['ambient', 'task', 'accent', 'decor'];
+const tag = (v) => (typeof v === 'string' && /^[a-z-]{1,20}$/.test(v) ? v : undefined);
 const num = (v) => typeof v === 'number' && Number.isFinite(v);
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -24,14 +27,14 @@ export function encodeState(s) {
   const keys = s.edited ? KEYS : KEYS.filter((k) => !['fixtures', 'track', 'cove'].includes(k));
   const out = Object.fromEntries(keys.map((k) => [k, s[k]]));
   // Decorative lights as compact [product, x, y, h, face] rows.
-  if (s.decor?.length) out.d = s.decor.map((d) => [d.pid, d.x, d.y, d.h, d.face]);
+  if (s.decor?.length) out.d = s.decor.map((d) => [d.pid, d.x, d.y, d.h, d.face, d.role || 'decor', d.why || 'added']);
   return toB64url(JSON.stringify(out));
 }
 
 function decodeDecor(rows, room, size) {
   if (!Array.isArray(rows)) return { decor: [], dropped: 0 };
   const ok = rows.filter((r) => Array.isArray(r) && decorById(r[0]) && num(r[1]) && num(r[2]) && num(r[3]) && FACES.includes(r[4]));
-  const items = ok.map(([pid, x, y, h, face], i) => ({ id: `a${i + 1}`, pid, x, y, h, face }));
+  const items = ok.map(([pid, x, y, h, face, role, why], i) => ({ id: `a${i + 1}`, pid, x, y, h, face, role: ROLES.includes(role) ? role : 'decor', why: tag(why) || 'added' }));
   return { decor: fitDecor(items, size, furnitureFor(room, size)), dropped: rows.length - ok.length };
 }
 
@@ -46,7 +49,7 @@ export function decodeState(str) {
   if (raw.fixtures === undefined && !raw.edited) {
     const layers = { track: Boolean(raw.layers?.track), cove: Boolean(raw.layers?.cove) };
     const d = decodeDecor(raw.d, raw.room, size);
-    return { state: autoPlan({ v: 1, room: raw.room, size, mood: raw.mood, finish: raw.finish, layers, decor: d.decor, downModel, headModel }).state, dropped: d.dropped };
+    return { state: autoPlan({ v: 1, room: raw.room, size, mood: raw.mood, finish: raw.finish, layers, decor: d.decor, downModel, headModel, uses: validUses(raw.room, raw.uses) }).state, dropped: d.dropped };
   }
   if (!Array.isArray(raw.fixtures)) return null;
   const t = raw.track;
@@ -64,6 +67,8 @@ export function decodeState(str) {
       x: f.layer === 'track' ? clamp(f.x, track.x0, track.x1) : clamp(f.x, 0, size.length),
       y: f.layer === 'track' ? track.y : clamp(f.y, 0, size.width),
       beam: num(f.beam) && p.beams.includes(f.beam) ? f.beam : (p.beams[0] ?? 36),
+      role: ROLES.includes(f.role) ? f.role : (f.layer === 'track' ? 'accent' : 'ambient'),
+      why: tag(f.why) || 'added',
     });
   }
   const cove = raw.cove && productByHandle(raw.cove.handle) ? { handle: raw.cove.handle } : null;
@@ -73,7 +78,7 @@ export function decodeState(str) {
     state: {
       v: 1, room: raw.room, size, mood: raw.mood, finish: raw.finish,
       layers: { track: Boolean(raw.layers?.track && track), cove: Boolean(cove) },
-      edited: Boolean(raw.edited), fixtures, track, cove, decor: d.decor, downModel, headModel,
+      edited: Boolean(raw.edited), fixtures, track, cove, decor: d.decor, downModel, headModel, uses: validUses(raw.room, raw.uses),
     },
     dropped,
   };

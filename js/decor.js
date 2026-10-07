@@ -55,6 +55,9 @@ export function normalize(it, size, furniture) {
     Object.assign(out, { face: h > 0 ? 'top' : 'floor', x, y, h });
   }
   out.x = r2(out.x); out.y = r2(out.y); out.h = r2(out.h);
+  // the scheme's layer and reason travel with the light
+  if (it.role) out.role = it.role;
+  if (it.why) out.why = it.why;
   return out;
 }
 
@@ -136,7 +139,7 @@ export function addDecor(s, pid, furniture) {
     : p.kind === 'wall' ? wallSpot(decor, p, s.size, furniture, s.room)
       : lampSpot(decor, p, s.size, furniture);
   const id = nextId(decor);
-  const item = normalize({ id, pid, h: 0, face: 'floor', ...spot }, s.size, furniture);
+  const item = normalize({ id, pid, h: 0, face: 'floor', role: 'decor', why: 'added', ...spot }, s.size, furniture);
   return { state: { ...s, decor: [...decor, item] }, id };
 }
 
