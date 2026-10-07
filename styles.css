@@ -1,10 +1,10 @@
 /* Archilight lighting designer — styled after the Archilight site (ranges pages):
    paper ground, ink text, sage panels, DM Sans with tight headings and an Italiana italic accent,
-   square buttons, underlined text links with arrows, dark footer.
-   Layout: header | step bar | form panel + 3D room | footer. Below 760px: steps, 3D room, panel. */
+   square buttons, underlined text links with arrows.
+   Layout: logo header | step bar | form panel + 3D room. Below 760px: steps, 3D room, panel. */
 :root {
   --ink: #1b1d1c; --paper: #f4f4f0; --surface: #fbfbf8; --white: #ffffff; --line: #d2d4ce;
-  --muted: #68715f; --sage: #e9ece4; --sage-2: #dce0d8; --night: #171918; --footer-ink: #e9ede4; --footer-muted: #b4baaf;
+  --muted: #68715f; --sage: #e9ece4; --sage-2: #dce0d8; --night: #171918;
   --ok: #3d6b4a; --low: #a8432a; --warn: #bc603c; --glow: #f0c878;
   --f-display: 'Italiana', Georgia, serif; --f-body: 'DM Sans', Arial, sans-serif;
   --edge: max(4vw, 20px);
@@ -21,10 +21,6 @@ em { font-family: var(--f-display); font-style: italic; letter-spacing: 0; }
 /* ---- Site header and step bar ---- */
 .site-header { height: 76px; padding: 0 var(--edge); display: flex; align-items: center; justify-content: space-between; gap: 28px; border-bottom: 1px solid var(--line); background: var(--paper); }
 .site-logo img { display: block; height: 20px; width: auto; }
-.site-nav { display: flex; gap: 32px; font-size: 14px; }
-.site-nav a { position: relative; padding: 10px 0; text-decoration: none; }
-.site-nav a::after { content: ""; position: absolute; left: 0; right: 0; bottom: 1px; height: 1px; background: currentColor; transform: scaleX(0); transform-origin: left; transition: transform .25s; }
-.site-nav a:hover::after { transform: scaleX(1); }
 
 .tool-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px 32px; flex-wrap: wrap; padding: 14px var(--edge); border-bottom: 1px solid var(--line); }
 .eyebrow, .set-label { text-transform: uppercase; font-size: 12px; letter-spacing: .17em; font-weight: 500; line-height: 1.6; margin: 0; }
@@ -74,7 +70,6 @@ input[type=checkbox] { accent-color: var(--ink); width: 18px; height: 18px; }
 .field-msg { color: var(--low); font-size: 13px; margin: 8px 0; }
 .ok-msg { color: var(--ok); font-size: 13px; margin: 8px 0; }
 .address { user-select: all; color: var(--ink); }
-#enquiry-text { font: 12px/1.5 ui-monospace, Menlo, monospace; }
 .muted { color: var(--muted); font-size: 13px; margin: 0; }
 .select-hint { padding: 12px 14px; background: var(--sage); margin: 0 0 4px; }
 .text-link { display: inline-block; border-bottom: 1px solid currentColor; padding: 8px 0; font-size: 14px; text-decoration: none; }
@@ -157,15 +152,7 @@ img.cutout { object-fit: contain !important; }
 .snapshot figcaption { font-size: 12px; color: var(--muted); margin-top: 8px; }
 .distributor { display: grid; gap: 8px; justify-items: start; padding: 18px; margin: 24px 0 6px; background: var(--sage); }
 .distributor p { margin: 0; }
-#enquiry { display: grid; gap: 12px; }
 
-/* ---- Footer ---- */
-.site-footer { background: var(--night); color: var(--footer-ink); padding: 56px var(--edge) 24px; }
-.footer-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 32px; flex-wrap: wrap; margin-bottom: 48px; }
-.footer-top img { height: 20px; width: auto; }
-.footer-top p { margin: 0; font-size: 24px; line-height: 1.3; letter-spacing: -.02em; }
-.footer-bottom { display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; border-top: 1px solid rgba(255, 255, 255, .15); padding-top: 22px; font-size: 12px; color: var(--footer-muted); }
-.disclaimer { margin: 0; max-width: 760px; }
 
 .toast { position: fixed; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; background: var(--ink); color: var(--paper); font-size: 14px; }
 .toast button { background: none; border: 0; border-bottom: 1px solid currentColor; color: inherit; padding: 4px 0; cursor: pointer; }
@@ -173,14 +160,10 @@ img.cutout { object-fit: contain !important; }
 @media (min-width: 761px) {
   .toast { left: auto; right: 24px; bottom: 24px; max-width: 420px; }
 }
-@media (max-width: 1000px) {
-  .site-nav { gap: 18px; }
-}
 @media (max-width: 760px) {
   .site-header { height: 60px; }
   .site-logo img { height: 16px; }
-  .site-nav { display: none; }
-  .tool-bar { padding: 10px 16px; }
+    .tool-bar { padding: 10px 16px; }
   .steps { gap: 18px; overflow-x: auto; }
   .steps button { white-space: nowrap; }
   .planner { grid-template-columns: minmax(0, 1fr); height: auto; min-height: 0; }
@@ -192,8 +175,6 @@ img.cutout { object-fit: contain !important; }
   .controls3d { gap: 8px 14px; padding: 10px 16px; }
   .controls3d input[type=range] { width: 110px; }
   .stage-bar { padding: 10px 16px; }
-  .footer-top p { font-size: 20px; }
-}
+  }
 @media (prefers-reduced-motion: reduce) {
-  .card-photo img, .site-nav a::after { transition: none; }
-}
+  .card-photo img, }

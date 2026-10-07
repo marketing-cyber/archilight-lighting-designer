@@ -1,12 +1,12 @@
-// Wizard wiring: state → panel, 3D room, product list and enquiry.
+// Wizard wiring: state → panel, 3D room, product list.
 // Flow: 1 Your room (type + size) → 2 Design (place Archilight lights in 3D, switch them on)
-// → 3 Your list (picture of the design, products, distributor links, enquiry).
+// → 3 Your list (picture of the design, products, distributor links).
 import { ROOMS, MOODS, LIMITS, clampSize } from './rooms.js';
 import { illuminanceGrid } from './calc.js';
 import * as P from './plan.js';
 import * as D from './decor.js';
 import { furnitureFor } from './furniture.js';
-import { buildSchedule, scheduleText, mailtoUrl, enquiryText, DISTRIBUTOR_EMAIL, DISTRIBUTOR } from './schedule.js';
+import { buildSchedule, scheduleText, DISTRIBUTOR } from './schedule.js';
 import { encodeState, decodeState } from './state.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -30,7 +30,7 @@ const shortName = (name) => name.replace(/\s*(Recessed\s+)?(LED\s+)?Downlights?\
 const app = {
   state: null, step: 0, selected: null, notices: [], sizeMsg: '', stats: null, tab: 'down', shape: 'all', openSeries: null,
   view3d: null, view3dFailed: false, light: { dim: 1, day: false, on: true }, history: [], snapshot: '',
-  contact: { project: 'Residential' }, formMsg: '', formOk: false, mailto: '', enquiry: '',
+  copyMsg: '', copyOk: false, copyText: '',
   moveFrame: 0, toastTimer: 0, dragStart: null, sliderStart: null,
 };
 
@@ -87,7 +87,7 @@ function roomHtml() {
   const s = app.state, room = ROOMS[s.room];
   const field = (key, label, lim) => `<label>${label}<span class="unit"><input type="number" inputmode="decimal" id="size-${key}" name="${key}" value="${s.size[key]}" min="${lim[0]}" max="${lim[1]}" step="0.1"> m</span></label>`;
   return `<h2>Light your space. <em>See it first.</em></h2>
-    <ol class="how"><li>Tell us the room</li><li>Place Archilight lights and switch them on</li><li>Send the list for a quote</li></ol>
+    <ol class="how"><li>Tell us the room</li><li>Place Archilight lights and switch them on</li><li>Get your product list</li></ol>
     <h3>Space</h3>
     <div class="seg" role="group" aria-label="Project type">${Object.entries(SECTORS).map(([k, v]) => `<button type="button" data-sector="${k}" aria-pressed="${room.sector === k}">${v}</button>`).join('')}</div>
     <div class="rooms">${Object.entries(ROOMS).filter(([, r]) => r.sector === room.sector).map(([k, r]) => `<button type="button" class="room" data-room="${k}" aria-pressed="${k === s.room}"><b>${r.label}</b></button>`).join('')}</div>
@@ -232,8 +232,6 @@ function listHtml() {
     <td><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.name)}</a><small>${esc(l.option)}</small>${l.note ? `<small class="note">${esc(l.note)}</small>` : ''}</td>
     <td class="sku">${esc(l.sku)}</td><td class="qty">${l.qty}</td></tr>`;
   const table = (rows) => `<div class="table-wrap"><table class="schedule"><thead><tr><th></th><th>Product</th><th>SKU</th><th>Qty</th></tr></thead><tbody>${rows.map(row).join('')}</tbody></table></div>`;
-  const c = app.contact;
-  const projects = ['Residential', 'Commercial', 'Architect / designer', 'Builder / electrician'];
   const s = app.state, room = ROOMS[s.room];
   return `<h2>Your <em>lighting list.</em></h2>
     ${app.snapshot ? `<figure class="snapshot"><img src="${app.snapshot}" alt="Your lighting design in 3D"><figcaption>${esc(room.label)}, ${s.size.length} × ${s.size.width} m · ${esc(MOODS[s.mood].label)} · ${esc(s.finish)} fittings</figcaption></figure>` : ''}
@@ -244,22 +242,8 @@ function listHtml() {
       <p>Archilight is supplied in New Zealand by <b>${DISTRIBUTOR.name}</b>. Every product above links to its page there, with stock and options.</p>
       <a class="text-link" href="${DISTRIBUTOR.url}" target="_blank" rel="noopener">Browse Archilight at ${DISTRIBUTOR.name} ↗</a>
     </div>
-    <h3>Get a quote</h3>
-    <p class="muted">Send this list and ${DISTRIBUTOR.name} will confirm drivers, compatibility and pricing.</p>
-    <form id="enquiry" novalidate>
-      <label>Name<input id="f-name" name="name" autocomplete="name" required value="${esc(c.name)}"></label>
-      <label>Email<input id="f-email" name="email" type="email" autocomplete="email" required value="${esc(c.email)}"></label>
-      <label>Phone (optional)<input id="f-phone" name="phone" type="tel" autocomplete="tel" value="${esc(c.phone)}"></label>
-      <label>Project<select id="f-project" name="project">${projects.map((x) => `<option${x === c.project ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
-      <label>Region<input id="f-region" name="region" autocomplete="address-level1" value="${esc(c.region)}"></label>
-      <label>Notes<textarea id="f-notes" name="notes" rows="3">${esc(c.notes)}</textarea></label>
-      ${app.formMsg ? `<p class="${app.formOk ? 'ok-msg' : 'field-msg'}" role="status">${esc(app.formMsg)}</p>` : ''}
-      ${app.mailto ? `<a id="mailto" class="button" href="${esc(app.mailto)}">Open the email draft again</a>` : ''}
-      ${app.enquiry ? `<label>Your enquiry<textarea id="enquiry-text" rows="8" readonly>${esc(app.enquiry)}</textarea></label>
-      <div class="actions"><button type="button" data-action="copy-enquiry">Copy enquiry</button></div>` : ''}
-      <button type="submit" class="button primary">Send for a quote ↗</button>
-      <p class="muted">This opens an email draft to <span class="address">${DISTRIBUTOR_EMAIL}</span> with your list. Nothing is sent until you press send.</p>
-    </form>`;
+    ${app.copyMsg ? `<p class="${app.copyOk ? 'ok-msg' : 'field-msg'}" role="status">${esc(app.copyMsg)}</p>` : ''}
+    ${app.copyText ? `<label>Your list<textarea id="list-text" rows="8" readonly>${esc(app.copyText)}</textarea></label>` : ''}`;
 }
 
 function renderPanel() {
@@ -341,9 +325,8 @@ function go(step) {
     app.view3d.selected = app.selected;
   }
   app.step = next;
-  app.formMsg = '';
-  app.mailto = '';
-  app.enquiry = '';
+  app.copyMsg = '';
+  app.copyText = '';
   render();
   $('#panel').scrollTop = 0;
   if (narrow()) $('#panel').scrollIntoView({ behavior: 'smooth' });
@@ -401,40 +384,21 @@ function chooseSeries(name, kind) {
   }
 }
 
-async function copyText(text, done) {
+// Copy the list; where the clipboard is blocked, show it selected so the customer can copy it.
+async function copyList() {
+  const text = scheduleText(app.state, buildSchedule(app.state));
   try {
     await navigator.clipboard.writeText(text);
-    app.formMsg = done;
-    app.formOk = true;
+    app.copyMsg = 'Product list copied.';
+    app.copyOk = true;
+    app.copyText = '';
   } catch {
-    app.formMsg = 'Copying is blocked here. Select the text and copy it instead.';
-    app.formOk = false;
+    app.copyMsg = 'Copying is blocked here. Select the list below and copy it.';
+    app.copyOk = false;
+    app.copyText = text;
   }
   renderPanel();
-  if (!app.formOk) $('#enquiry-text')?.select();
-}
-
-function submitEnquiry() {
-  const c = app.contact;
-  app.mailto = '';
-  app.enquiry = '';
-  if (!c.name?.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email || '')) {
-    app.formMsg = 'Please add your name and a valid email address.';
-    app.formOk = false;
-    return renderPanel();
-  }
-  const lines = buildSchedule(app.state);
-  app.enquiry = enquiryText(app.state, lines, c, location.href, app.stats);
-  app.mailto = mailtoUrl(app.state, lines, c, location.href, app.stats);
-  const full = decodeURIComponent(app.mailto.split('&body=')[1]) === app.enquiry;
-  const copied = navigator.clipboard?.writeText(app.enquiry).then(() => true, () => false) ?? Promise.resolve(false);
-  app.formMsg = full
-    ? `We tried to open an email draft to ${DISTRIBUTOR_EMAIL}. If nothing opened, copy the enquiry below and email it to that address.`
-    : `Your list is too long for an email link, so the draft is short. Paste the enquiry below into it, or email it to ${DISTRIBUTOR_EMAIL}.`;
-  app.formOk = true;
-  renderPanel();
-  $('#mailto')?.click();
-  copied.then((ok) => { if (ok && !full) { app.formMsg += ' It is already copied.'; renderPanel(); } });
+  if (!app.copyOk) $('#list-text')?.select();
 }
 
 function removeSelected() {
@@ -478,8 +442,7 @@ function onPanelClick(e) {
       if (r.id) app.selected = { type: 'decor', id: r.id };
       return commit(r.state);
     }
-    case 'copy': return copyText(scheduleText(app.state, buildSchedule(app.state)), 'Product list copied.');
-    case 'copy-enquiry': return copyText(app.enquiry, 'Enquiry copied.');
+    case 'copy': return copyList();
     default: return undefined;
   }
 }
@@ -510,7 +473,6 @@ function onPanelChange(e) {
 
 function onPanelInput(e) {
   const t = e.target;
-  if (t.form?.id === 'enquiry') { app.contact[t.name] = t.value; return; }
   if (t.name === 'decor-h') {
     // Live while sliding; the link, list and undo step are recorded on release (change).
     app.sliderStart ||= app.state;
@@ -528,13 +490,11 @@ function onLightInput(e) {
 }
 
 function init() {
-  $('#snapshot-date').textContent = P.SNAPSHOT_DATE;
   document.addEventListener('error', (e) => { if (e.target instanceof HTMLImageElement) e.target.remove(); }, true);
   $('#steps').addEventListener('click', (e) => { const b = e.target.closest('[data-go]'); if (b) go(Number(b.dataset.go)); });
   $('#panel').addEventListener('click', onPanelClick);
   $('#panel').addEventListener('change', onPanelChange);
   $('#panel').addEventListener('input', onPanelInput);
-  $('#panel').addEventListener('submit', (e) => { e.preventDefault(); submitEnquiry(); });
   $('#controls3d').addEventListener('input', onLightInput);
   $('#lights').addEventListener('click', () => { app.light.on = !app.light.on; syncLightControls(); app.view3d?.setLight({ ...app.light }); });
   $('#reset-view').addEventListener('click', () => app.view3d?.resetView());
