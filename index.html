@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Archilight Lighting Planner</title>
+<meta name="description" content="Plan your room's lighting with Archilight products and send it for a quote.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Italiana&display=swap">
+<link rel="stylesheet" href="styles.css">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<header class="site-header">
+  <a class="site-logo" href="https://archilight-light-space-scenes.cuddly-elk-3653.chatgpt.site/"><img src="assets/logo.png" alt="Archilight" width="135" height="26"></a>
+  <span class="tag">Lighting designer · demo</span>
+</header>
+<main class="planner">
+  <ol class="steps" id="steps" aria-label="Steps"></ol>
+  <section class="panel" id="panel" aria-live="polite"></section>
+  <section class="stage" aria-label="3D room">
+    <div class="stage-bar">
+      <p id="hint" class="hint-pill" role="status"></p>
+      <span class="stage-tools"><button type="button" class="link" id="undo" disabled>Undo</button><button type="button" class="link" id="reset-view">Reset view</button></span>
+    </div>
+    <div id="view3d"></div>
+    <div class="controls3d" id="controls3d">
+      <button type="button" class="toggle" id="lights" aria-pressed="true"><span class="dot"></span><span id="lights-label">Lights on</span></button>
+      <label>Brightness <input id="dim" type="range" name="dim" min="10" max="100" value="100"></label>
+      <label class="inline"><input id="day" type="checkbox" name="day"> Daylight</label>
+    </div>
+  </section>
+</main>
+<p class="disclaimer">Estimate only — not a certified lighting calculation. Light effects and product shapes in the 3D room are simplified. Product data from the Wellforces catalogue, <span id="snapshot-date"></span>. The distributor confirms compatibility, drivers and availability.</p>
+<div class="toast" id="toast" role="status" hidden><span id="toast-text"></span><button type="button" id="toast-see">See it</button></div>
+<noscript><p class="disclaimer">The lighting planner needs JavaScript.</p></noscript>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
